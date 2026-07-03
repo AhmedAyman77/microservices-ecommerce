@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import com.example.ecommerce.abstracts.CartService;
 import com.example.ecommerce.models.CartItems;
@@ -18,6 +19,7 @@ import com.example.ecommerce.share.CustomException;
 
 import jakarta.transaction.Transactional;
 
+@Service
 public class CartServiceImp implements CartService {
     @Autowired
     private UserRepository userRepository;
