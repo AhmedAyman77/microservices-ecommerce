@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 import com.example.ecommerce.models.Products;
 
 @Repository
-public interface ProductRepository extends JpaRepository<Products, UUID> {}
+public interface ProductRepository extends JpaRepository<Products, UUID> {
+    boolean existsByCategory_Id(UUID categoryId);
+}

@@ -103,6 +103,64 @@ public class CartServiceImp implements CartService {
     }
 
     @Override
+    @Transactional
+    public void setProductQuantity(Authentication authentication, UUID productId, Integer quantity) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String username = userDetails.getUsername();
+
+        Users user = userRepository.findByUsername(username).orElseThrow(
+                () -> CustomException.resourceNotFound("User not found")
+        );
+
+        Products product = productRepository.findById(productId).orElseThrow(
+                () -> CustomException.resourceNotFound("Product not found")
+        );
+
+        Carts cart = cartsRepository.findByUserId_Id(user.getId())
+                .orElseGet(() -> {
+                    Carts newCart = new Carts();
+                    newCart.setUserId(user);
+                    return cartsRepository.save(newCart);
+                });
+
+        CartItems cartItem = cartItemsRepository.findByCartId_IdAndProductId_Id(cart.getId(), product.getId());
+
+        if(quantity == 0) {
+            if(cartItem != null) {
+                cartItemsRepository.delete(cartItem);
+            }
+            return;
+        }
+
+        if(cartItem == null) {
+            cartItem = new CartItems();
+            cartItem.setCartId(cart);
+            cartItem.setProductId(product);
+        }
+
+        cartItem.setQuantity(quantity);
+        cartItemsRepository.save(cartItem);
+    }
+
+    @Override
+    @Transactional
+    public void clearCart(Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String username = userDetails.getUsername();
+
+        Users user = userRepository.findByUsername(username).orElseThrow(
+                () -> CustomException.resourceNotFound("User not found")
+        );
+
+        Carts cart = cartsRepository.findByUserId_Id(user.getId()).orElseThrow(
+                () -> CustomException.resourceNotFound("Cart not found")
+        );
+
+        cartItemsRepository.deleteByCartId_Id(cart.getId());
+    }
+
+
+    @Override
     public List<CartItems> getUserCart(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String username = userDetails.getUsername();

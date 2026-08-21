@@ -13,4 +13,5 @@ import com.example.ecommerce.models.CartItems;
 public interface CartItemsRepository extends JpaRepository<CartItems, UUID> {
     CartItems findByCartId_IdAndProductId_Id(UUID cartId, UUID productId);
     Optional<List<CartItems>> findByCartId_Id(UUID cartId);
+    void deleteByCartId_Id(UUID cartId);
 }

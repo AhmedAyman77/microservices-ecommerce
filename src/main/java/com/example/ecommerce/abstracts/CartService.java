@@ -11,5 +11,9 @@ public interface CartService {
 
     public void removeProduct(Authentication authentication, UUID productId);
 
+    public void setProductQuantity(Authentication authentication, UUID productId, Integer quantity);
+
+    public void clearCart(Authentication authentication);
+
     public List<CartItems> getUserCart(Authentication authentication);
 }
