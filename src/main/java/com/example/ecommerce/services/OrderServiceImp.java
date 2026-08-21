@@ -31,16 +31,16 @@ import jakarta.transaction.Transactional;
 public class OrderServiceImp implements OrderService {
     @Autowired
     private CartsRepository cartsRepository;
-    
+
     @Autowired
     private CartItemsRepository cartItemsRepository;
-    
+
     @Autowired
     private OrderRepository orderRepository;
-    
+
     @Autowired
     private OrderItemsRepository orderItemsRepository;
-    
+
     @Autowired
     private ProductRepository productRepository;
 
@@ -58,10 +58,10 @@ public class OrderServiceImp implements OrderService {
         );
 
         Carts cart = cartsRepository.findByUserId_Id(user.getId())
-            .orElseThrow(() -> CustomException.resourceNotFound("Cart not found"));
+                .orElseThrow(() -> CustomException.resourceNotFound("Cart not found"));
 
         List<CartItems> cartItems = cartItemsRepository.findByCartId_Id(cart.getId()).orElseThrow(
-            () -> CustomException.badRequest("Cart is empty")
+                () -> CustomException.badRequest("Cart is empty")
         );
 
         Orders order = new Orders();
@@ -76,11 +76,11 @@ public class OrderServiceImp implements OrderService {
             UUID productId = cartItem.getProductId();
 
             Products product = productRepository.findById(productId)
-                .orElseThrow(() -> CustomException.resourceNotFound("Product not found"));
+                    .orElseThrow(() -> CustomException.resourceNotFound("Product not found"));
 
             if (product.getQuantity() < cartItem.getQuantity()) {
                 throw CustomException.badRequest(
-                    "Insufficient stock for product: " + product.getName()
+                        "Insufficient stock for product: " + product.getName()
                 );
             }
 
@@ -88,7 +88,7 @@ public class OrderServiceImp implements OrderService {
             productRepository.save(product);
 
             BigDecimal itemTotal = product.getPrice()
-                .multiply(BigDecimal.valueOf(cartItem.getQuantity()));
+                    .multiply(BigDecimal.valueOf(cartItem.getQuantity()));
 
             OrderItems orderItem = new OrderItems();
             orderItem.setOrderId(savedOrder);
@@ -130,5 +130,42 @@ public class OrderServiceImp implements OrderService {
             throw CustomException.resourceNotFound("Order not found");
         }
         return orderItemsRepository.findByOrderId_Id(orderId);
+    }
+
+    @Override
+    public List<Orders> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    @Override
+    @Transactional
+    public Orders updateOrderStatus(UUID orderId, OrderStatus newStatus) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> CustomException.resourceNotFound("Order not found"));
+
+        OrderStatus currentStatus = order.getStatus();
+
+        boolean isLegalTransition =
+                (currentStatus == OrderStatus.PENDING && newStatus == OrderStatus.PAID) ||
+                        (currentStatus == OrderStatus.PENDING && newStatus == OrderStatus.CANCELLED);
+
+        if (!isLegalTransition) {
+            throw CustomException.badRequest(
+                    "Cannot change order status from " + currentStatus + " to " + newStatus
+            );
+        }
+
+        if (newStatus == OrderStatus.CANCELLED) {
+            List<OrderItems> orderItems = orderItemsRepository.findByOrderId_Id(orderId);
+            for (OrderItems item : orderItems) {
+                Products product = productRepository.findById(item.getProductId())
+                        .orElseThrow(() -> CustomException.resourceNotFound("Product not found"));
+                product.setQuantity(product.getQuantity() + item.getQuantity());
+                productRepository.save(product);
+            }
+        }
+
+        order.setStatus(newStatus);
+        return orderRepository.save(order);
     }
 }
