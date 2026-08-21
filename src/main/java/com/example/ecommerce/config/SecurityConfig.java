@@ -56,6 +56,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/products/{productID}").hasAnyRole("CUSTOMER", "ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/products/{productID}").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/products/{productID}").hasRole("ADMIN")
+                .requestMatchers("/cart/**").hasAnyRole("CUSTOMER", "ADMIN")
+                .requestMatchers("/orders/**").hasAnyRole("CUSTOMER", "ADMIN")
                 .anyRequest()
                 .authenticated();
             })

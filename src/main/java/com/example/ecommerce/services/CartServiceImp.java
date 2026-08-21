@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import com.example.ecommerce.abstracts.CartService;
@@ -36,80 +38,84 @@ public class CartServiceImp implements CartService {
 
     @Override
     @Transactional
-    public void addProduct(UUID userId, UUID productId) {
-        try {
-            Users user = userRepository.findById(userId).orElseThrow(
+    public void addProduct(Authentication authentication, UUID productId) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String username = userDetails.getUsername();
+
+        Users user = userRepository.findByUsername(username).orElseThrow(
                 () -> CustomException.resourceNotFound("User not found")
-            );
+        );
 
-            Products product = productRepository.findById(productId).orElseThrow(
-                () -> CustomException.resourceNotFound("Product not found")
-            );
+        Products product = productRepository.findById(productId).orElseThrow(
+            () -> CustomException.resourceNotFound("Product not found")
+        );
 
-            Carts cart = cartsRepository.findByUserId_Id(userId)
-                .orElseGet(() -> {
-                    Carts newCart = new Carts();
-                    newCart.setUserId(user);
-                    return cartsRepository.save(newCart);
-                });
+        Carts cart = cartsRepository.findByUserId_Id(user.getId())
+            .orElseGet(() -> {
+                Carts newCart = new Carts();
+                newCart.setUserId(user);
+                return cartsRepository.save(newCart);
+            });
 
-            CartItems cartItem = cartItemsRepository.findByCartId_IdAndProductId_Id(cart.getId(), product.getId());
-            if(cartItem == null) {
-                cartItem = new CartItems();
-                cartItem.setCartId(cart);
-                cartItem.setProductId(product);
-                cartItem.setQuantity(1);
-            }
-            else {
-                cartItem.setQuantity(cartItem.getQuantity() + 1);
-            }
-
-            cartItemsRepository.save(cartItem);
-        } catch (Exception e) {
-            throw CustomException.internalServerError("Error occurred while adding product to cart");
+        CartItems cartItem = cartItemsRepository.findByCartId_IdAndProductId_Id(cart.getId(), product.getId());
+        if(cartItem == null) {
+            cartItem = new CartItems();
+            cartItem.setCartId(cart);
+            cartItem.setProductId(product);
+            cartItem.setQuantity(1);
         }
+        else {
+            cartItem.setQuantity(cartItem.getQuantity() + 1);
+        }
+
+        cartItemsRepository.save(cartItem);
     }
 
     @Override
-    public void removeProduct(UUID userId, UUID productId) {
-        try {
-            Users user = userRepository.findById(userId).orElseThrow(
+    public void removeProduct(Authentication authentication, UUID productId) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String username = userDetails.getUsername();
+
+        Users user = userRepository.findByUsername(username).orElseThrow(
                 () -> CustomException.resourceNotFound("User not found")
-            );
+        );
 
-            Products product = productRepository.findById(productId).orElseThrow(
-                () -> CustomException.resourceNotFound("Product not found")
-            );
+        Products product = productRepository.findById(productId).orElseThrow(
+            () -> CustomException.resourceNotFound("Product not found")
+        );
 
-            Carts cart = cartsRepository.findByUserId_Id(user.getId()).orElseThrow(
-                () -> CustomException.resourceNotFound("Cart not found")
-            );
-
-            CartItems cartItem = cartItemsRepository.findByCartId_IdAndProductId_Id(cart.getId(), product.getId());
-            if(cartItem == null) {
-                throw CustomException.resourceNotFound("Product not found in cart");
-            }
-
-            if(cartItem.getQuantity() > 1) {
-                cartItem.setQuantity(cartItem.getQuantity() - 1);
-                cartItemsRepository.save(cartItem);
-            }
-            else {
-                cartItemsRepository.delete(cartItem);
-            }
-        } catch (Exception e) {
-            throw CustomException.internalServerError("Error occurred while removing product from cart");
-        }
-    }
-
-    @Override
-    public List<CartItems> getUserCart(UUID userId) {
-        Carts cart = cartsRepository.findByUserId_Id(userId).orElseThrow(
+        Carts cart = cartsRepository.findByUserId_Id(user.getId()).orElseThrow(
             () -> CustomException.resourceNotFound("Cart not found")
         );
-        return cartItemsRepository.findByCartId_Id(cart.getId()).orElseThrow(
-            () -> CustomException.resourceNotFound("Cart items not found")
+
+        CartItems cartItem = cartItemsRepository.findByCartId_IdAndProductId_Id(cart.getId(), product.getId());
+        if(cartItem == null) {
+            throw CustomException.resourceNotFound("Product not found in cart");
+        }
+
+        if(cartItem.getQuantity() > 1) {
+            cartItem.setQuantity(cartItem.getQuantity() - 1);
+            cartItemsRepository.save(cartItem);
+        }
+        else {
+            cartItemsRepository.delete(cartItem);
+        }
+    }
+
+    @Override
+    public List<CartItems> getUserCart(Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String username = userDetails.getUsername();
+
+        Users user = userRepository.findByUsername(username).orElseThrow(
+                () -> CustomException.resourceNotFound("User not found")
         );
+
+        Carts cart = cartsRepository.findByUserId_Id(user.getId()).orElseThrow(
+            () -> CustomException.resourceNotFound("Cart not found")
+        );
+
+        return cartItemsRepository.findByCartId_Id(cart.getId()).orElse(List.of());
     }
 
 }

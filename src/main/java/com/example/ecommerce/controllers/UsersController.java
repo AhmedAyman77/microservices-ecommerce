@@ -2,6 +2,7 @@ package com.example.ecommerce.controllers;
 
 import java.util.UUID;
 
+import com.example.ecommerce.dtos.UserResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -26,22 +27,24 @@ public class UsersController {
     private UserService userService;
 
     @GetMapping("/me")
-    public ResponseEntity<GlobalResponse<?>> getUser(Authentication authentication) {
+    public ResponseEntity<GlobalResponse<UserResponse>> getUser(Authentication authentication) {
         Users user = userService.getUserByAuth(authentication);
+        UserResponse res = new UserResponse(user.getUsername(), user.getEmail(), user.getRole());
 
         return ResponseEntity.status(200).body(
-            new GlobalResponse<Users> (user)
+            new GlobalResponse<UserResponse> (res)
         );
     }
 
     @PutMapping
-    public ResponseEntity<GlobalResponse<?>> updateUser(
+    public ResponseEntity<GlobalResponse<UserResponse>> updateUser(
         Authentication authentication,
         @Valid @RequestBody UpdateUser updatedUser) {
         Users user = userService.updateUser(authentication, updatedUser);
+        UserResponse res = new UserResponse(user.getUsername(), user.getEmail(), user.getRole());
 
         return ResponseEntity.status(200).body(
-            new GlobalResponse<Users> (user)
+            new GlobalResponse<UserResponse> (res)
         );
     }
 }

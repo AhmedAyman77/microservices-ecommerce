@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import com.example.ecommerce.abstracts.OrderService;
@@ -47,11 +49,15 @@ public class OrderServiceImp implements OrderService {
 
     @Override
     @Transactional
-    public Orders checkout(UUID userId) {
-        Users user = userRepository.findById(userId)
-            .orElseThrow(() -> CustomException.resourceNotFound("User not found"));
+    public Orders checkout(Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String username = userDetails.getUsername();
 
-        Carts cart = cartsRepository.findByUserId_Id(userId)
+        Users user = userRepository.findByUsername(username).orElseThrow(
+                () -> CustomException.resourceNotFound("User not found")
+        );
+
+        Carts cart = cartsRepository.findByUserId_Id(user.getId())
             .orElseThrow(() -> CustomException.resourceNotFound("Cart not found"));
 
         List<CartItems> cartItems = cartItemsRepository.findByCartId_Id(cart.getId()).orElseThrow(
@@ -104,11 +110,18 @@ public class OrderServiceImp implements OrderService {
     }
 
     @Override
-    public List<Orders> getOrdersByUserId(UUID userId) {
-        if (!userRepository.existsById(userId)) {
+    public List<Orders> getOrdersByUserId(Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String username = userDetails.getUsername();
+
+        Users user = userRepository.findByUsername(username).orElseThrow(
+                () -> CustomException.resourceNotFound("User not found")
+        );
+
+        if (!userRepository.existsById(user.getId())) {
             throw CustomException.resourceNotFound("User not found");
         }
-        return orderRepository.findByUserId_Id(userId);
+        return orderRepository.findByUserId_Id(user.getId());
     }
 
     @Override

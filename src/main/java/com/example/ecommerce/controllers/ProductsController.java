@@ -83,7 +83,7 @@ public class ProductsController {
     @PutMapping("/{productID}")
     public ResponseEntity<GlobalResponse<Products>> updateProduct(
         @PathVariable UUID productID,
-        @RequestBody UpdateProduct product
+        @Valid @RequestBody UpdateProduct product
     ) {
         Products updatedProduct = productService.updateProduct(productID, product);
         

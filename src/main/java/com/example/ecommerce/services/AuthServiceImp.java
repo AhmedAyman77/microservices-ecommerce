@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -56,12 +57,13 @@ public class AuthServiceImp implements AuthService {
         customClaims.put("userId", user.getId());
         customClaims.put("role", user.getRole());
         
-        String refreshToken = jwtHelper.generateToken(customClaims, user, 1000 * 60 * 60 * 60 * 24 * 7); // 7 days
+        String refreshToken = jwtHelper.generateToken(customClaims, user, 1000 * 60 * 60 * 24 * 7); // 7 days
         
         return refreshToken;
     }
 
     @Override
+    @Transactional
     public Users signUp(SignupUser signupUser) {
         Optional<Users> existingByUsername = userRepository.findByUsername(signupUser.username());
         if(existingByUsername.isPresent() && existingByUsername.get().isVerified()) {
@@ -88,7 +90,9 @@ public class AuthServiceImp implements AuthService {
 
     @Override
     public void verifyEmail(String token) {
-        jwtHelper.isTokenExpired(token);
+        if (jwtHelper.isTokenExpired(token)) {
+            throw CustomException.badRequest("Token has expired");
+        }
 
         String username = jwtHelper.extractUsername(token);
         Users user = userRepository.findByUsername(username)
@@ -114,7 +118,9 @@ public class AuthServiceImp implements AuthService {
 
     @Override
     public String refreshToken(String refreshToken) {
-        jwtHelper.isTokenExpired(refreshToken);
+        if (jwtHelper.isTokenExpired(refreshToken)) {
+            throw CustomException.badRequest("Token has expired");
+        }
 
         String username = jwtHelper.extractUsername(refreshToken);
         Users user = userRepository.findByUsername(username)
