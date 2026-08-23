@@ -1,1 +1,1 @@
-# microservices-ecommerce
+# ecommerce-java
