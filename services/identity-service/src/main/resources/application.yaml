@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: identity-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/identity_service
+    username: javauser
+    password: JavaUser@123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+#  kafka:
+#    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+#    producer:
+#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+server:
+  port: 8081
+
+jwt:
+  secret: cd299572df97cc613947b36ff80231d512d314f799401b816e06ae30d2c850a2
+
+backend:
+  origin: http://localhost:8080
+
+#kafka:
+#  topic:
+#    user-signed-up: user-signed-up
