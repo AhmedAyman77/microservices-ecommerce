@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/catalog_service
+    username: javauser
+    password: JavaUser@123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+server:
+  port: 8082
+
+jwt:
+  secret: cd299572df97cc613947b36ff80231d512d314f799401b816e06ae30d2c850a2
+
+cloudinary:
+  cloud-name: dvqjrwyza
+  api-key: 555343679765367
+  api-secret: 26DxFK4SMkAfnu8_STgcAULolos
+
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
