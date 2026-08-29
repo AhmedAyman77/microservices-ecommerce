@@ -1,4 +1,4 @@
-package com.example.catalogservice.config;
+package com.example.cartservice.config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

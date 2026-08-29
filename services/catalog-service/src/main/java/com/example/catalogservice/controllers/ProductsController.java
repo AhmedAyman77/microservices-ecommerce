@@ -3,6 +3,7 @@ package com.example.catalogservice.controllers;
 import com.example.catalogservice.abstracts.ProductService;
 import com.example.catalogservice.dtos.CreateProduct;
 import com.example.catalogservice.dtos.PaginatedResponse;
+import com.example.catalogservice.dtos.ProductResponse;
 import com.example.catalogservice.dtos.UpdateProduct;
 import com.example.catalogservice.models.Products;
 import com.example.catalogservice.share.GlobalResponse;
@@ -24,11 +25,12 @@ public class ProductsController {
     private ProductService productService;
 
     @PostMapping
-    public ResponseEntity<GlobalResponse<Products>> createProduct(@Valid @RequestBody CreateProduct product) {
-        Products newProduct = productService.createProduct(product);
+    public ResponseEntity<GlobalResponse<ProductResponse>> createProduct(@Valid @RequestBody CreateProduct product) {
+        ProductResponse res = convertProductToProductResponse(productService.createProduct(product));
+
         return ResponseEntity.status(201)
         .body(
-            new GlobalResponse<Products>(newProduct)
+            new GlobalResponse<ProductResponse>(res)
         );
     }
     
@@ -60,22 +62,22 @@ public class ProductsController {
     }
 
     @GetMapping("/{productID}")
-    public ResponseEntity<GlobalResponse<Products>> getProductsById(@PathVariable UUID productID) {
-        Products product = productService.getProductsById(productID);
+    public ResponseEntity<GlobalResponse<ProductResponse>> getProductsById(@PathVariable UUID productID) {
+        ProductResponse res = convertProductToProductResponse(productService.getProductsById(productID));
         return ResponseEntity.ok(
-            new GlobalResponse<Products>(product)
+            new GlobalResponse<ProductResponse>(res)
         );
     }
     
     @PutMapping("/{productID}")
-    public ResponseEntity<GlobalResponse<Products>> updateProduct(
+    public ResponseEntity<GlobalResponse<ProductResponse>> updateProduct(
         @PathVariable UUID productID,
         @Valid @RequestBody UpdateProduct product
     ) {
-        Products updatedProduct = productService.updateProduct(productID, product);
+        ProductResponse res = convertProductToProductResponse(productService.updateProduct(productID, product));
         
         return ResponseEntity.ok(
-            new GlobalResponse<Products>(updatedProduct)
+            new GlobalResponse<ProductResponse>(res)
         );
     }
 
@@ -97,6 +99,18 @@ public class ProductsController {
         String imagePath = productService.uploadImage(productId, image);
         return ResponseEntity.ok(
             new GlobalResponse<String>(imagePath)
+        );
+    }
+
+
+//    private
+
+    private ProductResponse convertProductToProductResponse(Products product) {
+        return new ProductResponse(
+                product.getName(),
+                product.getQuantity(),
+                product.getPrice(),
+                product.getCategoryId()
         );
     }
 }
