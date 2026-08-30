@@ -14,8 +14,16 @@ public class OrderEventProducer {
     @Autowired
     private KafkaTemplate<String, Object> kafkaTemplate;
 
-    public void publishOrderPlaced(String email, UUID orderId, BigDecimal totalPrice) {
-        // key = orderId, so events for the same order stay ordered
-        kafkaTemplate.send(TOPIC, orderId.toString(), new OrderPlacedEvent(email, orderId, totalPrice));
+    public void publishOrderPlaced(UUID eventId, String email, UUID orderId, BigDecimal totalPrice) {
+        try {
+            kafkaTemplate
+                    .send(TOPIC, orderId.toString(), new OrderPlacedEvent(email, orderId, totalPrice))
+                    .get();
+        } catch (Exception e) {
+            System.err.println(
+                    "Failed to publish order event: "
+                            + eventId
+            );
+        }
     }
 }

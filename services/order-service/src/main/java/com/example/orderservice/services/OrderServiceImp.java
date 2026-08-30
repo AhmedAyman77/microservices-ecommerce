@@ -5,8 +5,10 @@ import com.example.orderservice.dtos.*;
 import com.example.orderservice.enums.OrderStatus;
 import com.example.orderservice.events.OrderEventProducer;
 import com.example.orderservice.models.OrderItems;
+import com.example.orderservice.models.OrderOutboxEvent;
 import com.example.orderservice.models.Orders;
 import com.example.orderservice.repository.OrderItemsRepository;
+import com.example.orderservice.repository.OrderOutboxEventRepository;
 import com.example.orderservice.repository.OrderRepository;
 import com.example.orderservice.share.CustomException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +22,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,7 +38,7 @@ public class OrderServiceImp implements OrderService {
     private OrderItemsRepository orderItemsRepository;
 
     @Autowired
-    private OrderEventProducer orderEventProducer;
+    private OrderOutboxEventRepository orderOutboxEventRepository;
 
     @Override
     @Transactional
@@ -114,12 +117,19 @@ public class OrderServiceImp implements OrderService {
                 .bodyToMono(void.class)
                 .block();
 
-//        payment
-
-//        notification
-//        publish event -> notification-service will pick it up and send the confirmation email
+//        notification Event
+//        save the notification event and publish it when the transaction commit is done
+//        Save event in the SAME database transaction
         String email = getUserEmail();
-        orderEventProducer.publishOrderPlaced(email, savedOrder.getId(), total);
+        OrderOutboxEvent outboxEvent = OrderOutboxEvent.builder()
+                .orderId(savedOrder.getId())
+                .email(email)
+                .totalPrice(total)
+                .published(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        orderOutboxEventRepository.save(outboxEvent);
 
         return savedOrder;
     }
