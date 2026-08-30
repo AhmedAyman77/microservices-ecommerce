@@ -23,6 +23,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -64,74 +65,98 @@ public class OrderServiceImp implements OrderService {
 
         BigDecimal total = BigDecimal.ZERO;
 
-        for (CartItemsResponse cartItem : cartItems) {
-            UUID productId = cartItem.productId();
 
-             ProductResponse product = callGetProduct(productId);
+//        SAGA (orchestration): as each item's stock decrement succeeds, we
+//        remember it here. If ANYTHING later in checkout fails, we walk this
+//        list backwards and undo (compensate) every decrement that already
+//        went through on catalog-service — since @Transactional can't reach
+//        across services to roll those back for us.
+        List<CartItemsResponse> decrementedItems = new ArrayList<>();
 
-            if(product == null) {
-                throw CustomException.resourceNotFound("Product not found");
-            }
+        try {
+            for (CartItemsResponse cartItem : cartItems) {
+                UUID productId = cartItem.productId();
 
-            if (product.quantity() < cartItem.quantity()) {
-                throw CustomException.badRequest(
-                        "Insufficient stock for product: " + product.name()
-                );
-            }
+                ProductResponse product = callGetProduct(productId);
+
+                if (product == null) {
+                    throw CustomException.resourceNotFound("Product not found");
+                }
+
+                if (product.quantity() < cartItem.quantity()) {
+                    throw CustomException.badRequest(
+                            "Insufficient stock for product: " + product.name()
+                    );
+                }
 
 //            create updated product obj for calling updateProduct endpoint
-            UpdateProduct updatedProduct = new UpdateProduct(
-                    null,
-                    product.quantity() - cartItem.quantity(),
-                    null,
-                    null
-            );
+                UpdateProduct updatedProduct = new UpdateProduct(
+                        null,
+                        product.quantity() - cartItem.quantity(),
+                        null,
+                        null
+                );
 
 //                call catalog-service to update product quantity
-            callUpdateProduct(productId, updatedProduct);
+                callUpdateProduct(productId, updatedProduct);
+                decrementedItems.add(cartItem);
 
 
-            BigDecimal itemTotal = product.price()
-                    .multiply(BigDecimal.valueOf(cartItem.quantity()));
+                BigDecimal itemTotal = product.price()
+                        .multiply(BigDecimal.valueOf(cartItem.quantity()));
 
-            OrderItems orderItem = new OrderItems();
-            orderItem.setOrderId(savedOrder);
-            orderItem.setProductId(productId);
-            orderItem.setQuantity(cartItem.quantity());
-            orderItem.setPrice(product.price());
-            orderItem.setTotalPrice(itemTotal);
-            orderItemsRepository.save(orderItem);
+                OrderItems orderItem = new OrderItems();
+                orderItem.setOrderId(savedOrder);
+                orderItem.setProductId(productId);
+                orderItem.setQuantity(cartItem.quantity());
+                orderItem.setPrice(product.price());
+                orderItem.setTotalPrice(itemTotal);
+                orderItemsRepository.save(orderItem);
 
-            total = total.add(itemTotal);
-        }
+                total = total.add(itemTotal);
+            }
 
-        savedOrder.setTotalPrice(total);
-        orderRepository.save(savedOrder);
+            savedOrder.setTotalPrice(total);
+            orderRepository.save(savedOrder);
 
 //        clear cart
-        webClientBuilder.build()
-                .delete()
-                .uri("http://cart-service/cart")
-                .header(HttpHeaders.AUTHORIZATION, getIncomingAuthHeader())
-                .retrieve()
-                .bodyToMono(void.class)
-                .block();
+            webClientBuilder.build()
+                    .delete()
+                    .uri("http://cart-service/cart")
+                    .header(HttpHeaders.AUTHORIZATION, getIncomingAuthHeader())
+                    .retrieve()
+                    .bodyToMono(void.class)
+                    .block();
 
 //        notification Event
 //        save the notification event and publish it when the transaction commit is done
 //        Save event in the SAME database transaction
-        String email = getUserEmail();
-        OrderOutboxEvent outboxEvent = OrderOutboxEvent.builder()
-                .orderId(savedOrder.getId())
-                .email(email)
-                .totalPrice(total)
-                .published(false)
-                .createdAt(LocalDateTime.now())
-                .build();
+            String email = getUserEmail();
+            OrderOutboxEvent outboxEvent = OrderOutboxEvent.builder()
+                    .orderId(savedOrder.getId())
+                    .email(email)
+                    .totalPrice(total)
+                    .published(false)
+                    .createdAt(LocalDateTime.now())
+                    .build();
 
-        orderOutboxEventRepository.save(outboxEvent);
+            orderOutboxEventRepository.save(outboxEvent);
 
-        return savedOrder;
+            return savedOrder;
+        }  catch (Exception ex) {
+            for (int i = decrementedItems.size() - 1; i >= 0; i--) {
+                CartItemsResponse toCompensate = decrementedItems.get(i);
+                try {
+                    restoreStock(toCompensate.productId(), toCompensate.quantity());
+                } catch (Exception compensationEx) {
+                    System.err.println(
+                            "SAGA COMPENSATION FAILED for product " + toCompensate.productId()
+                                    + " — manual stock reconciliation needed: " + compensationEx.getMessage()
+                    );
+                }
+            }
+            throw ex;
+        }
     }
 
     @Override
@@ -255,5 +280,21 @@ public class OrderServiceImp implements OrderService {
         }
 
         return user.email();
+    }
+
+    private void restoreStock(UUID productId, int quantity) {
+        ProductResponse product = callGetProduct(productId);
+        if (product == null) {
+            return;
+        }
+
+        UpdateProduct restored = new UpdateProduct(
+                null,
+                product.quantity() + quantity,
+                null,
+                null
+        );
+
+        callUpdateProduct(productId, restored);
     }
 }
