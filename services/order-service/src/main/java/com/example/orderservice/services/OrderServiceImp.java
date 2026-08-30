@@ -1,11 +1,9 @@
 package com.example.orderservice.services;
 
 import com.example.orderservice.abstracts.OrderService;
-import com.example.orderservice.dtos.ApiResponse;
-import com.example.orderservice.dtos.CartItemsResponse;
-import com.example.orderservice.dtos.ProductResponse;
-import com.example.orderservice.dtos.UpdateProduct;
+import com.example.orderservice.dtos.*;
 import com.example.orderservice.enums.OrderStatus;
+import com.example.orderservice.events.OrderEventProducer;
 import com.example.orderservice.models.OrderItems;
 import com.example.orderservice.models.Orders;
 import com.example.orderservice.repository.OrderItemsRepository;
@@ -35,6 +33,9 @@ public class OrderServiceImp implements OrderService {
 
     @Autowired
     private OrderItemsRepository orderItemsRepository;
+
+    @Autowired
+    private OrderEventProducer orderEventProducer;
 
     @Override
     @Transactional
@@ -104,6 +105,7 @@ public class OrderServiceImp implements OrderService {
         savedOrder.setTotalPrice(total);
         orderRepository.save(savedOrder);
 
+//        clear cart
         webClientBuilder.build()
                 .delete()
                 .uri("http://cart-service/cart")
@@ -111,6 +113,13 @@ public class OrderServiceImp implements OrderService {
                 .retrieve()
                 .bodyToMono(void.class)
                 .block();
+
+//        payment
+
+//        notification
+//        publish event -> notification-service will pick it up and send the confirmation email
+        String email = getUserEmail();
+        orderEventProducer.publishOrderPlaced(email, savedOrder.getId(), total);
 
         return savedOrder;
     }
@@ -218,5 +227,23 @@ public class OrderServiceImp implements OrderService {
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<ApiResponse<ProductResponse>>() {})
                 .block();
+    }
+
+    private String getUserEmail() {
+        ApiResponse<UserResponse> userApiResponse = webClientBuilder.build()
+                .get()
+                .uri("http://identity-service/users/me")
+                .header(HttpHeaders.AUTHORIZATION, getIncomingAuthHeader())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<ApiResponse<UserResponse>>() {})
+                .block();
+
+        UserResponse user = userApiResponse != null ? userApiResponse.data() : null;
+
+        if (user == null) {
+            throw CustomException.resourceNotFound("User not found");
+        }
+
+        return user.email();
     }
 }

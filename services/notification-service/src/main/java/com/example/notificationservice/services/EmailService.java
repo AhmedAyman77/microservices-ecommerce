@@ -26,4 +26,13 @@ public class EmailService {
         message.setText("Please click the following link to confirm your account creation: " + link);
         javaMailSender.send(message);
     }
+
+    public void orderConfirmationEmail(String to, String orderId, java.math.BigDecimal totalPrice) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from);
+        message.setTo(to);
+        message.setSubject("Order Confirmation");
+        message.setText("Thanks for your order! Order #" + orderId + " has been placed successfully. Total: $" + totalPrice);
+        javaMailSender.send(message);
+    }
 }

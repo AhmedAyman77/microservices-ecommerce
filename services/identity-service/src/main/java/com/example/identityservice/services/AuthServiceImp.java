@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import com.example.identityservice.event.UserEventProducer;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,8 +35,8 @@ public class AuthServiceImp implements AuthService {
     @Autowired
     private JwtHelper jwtHelper;
 
-//    @Autowired
-//    private EmailService emailService;
+    @Autowired
+    private UserEventProducer userEventProducer;
 
     @Override
     public String login(LoginUser loginUser) {
@@ -84,8 +85,12 @@ public class AuthServiceImp implements AuthService {
         String token = jwtHelper.generateToken(newUser, 1000 * 60 * 5); // 5 minutes
         newUser.setVerificationToken(token);
 
-//        emailService.verifyAccountCreationEmail(signupUser.email(), token);
-        return userRepository.save(newUser);
+        Users res = userRepository.save(newUser);
+
+//        publish event -> notification-service will pick it up and send the email
+        userEventProducer.publishUserRegistered(signupUser.email(), token);
+
+        return res;
     }
 
     @Override
@@ -113,7 +118,8 @@ public class AuthServiceImp implements AuthService {
         user.setVerificationToken(token);
         userRepository.save(user);
 
-//        emailService.verifyAccountCreationEmail(email, token);
+//        publish event -> notification-service will pick it up and send the email
+        userEventProducer.publishUserRegistered(email, token);
     }
 
     @Override
