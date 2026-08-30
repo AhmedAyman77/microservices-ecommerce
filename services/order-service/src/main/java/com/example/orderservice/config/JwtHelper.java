@@ -1,6 +1,6 @@
-package com.example.catalogservice.config;
+package com.example.orderservice.config;
 
-import com.example.catalogservice.share.CustomException;
+import com.example.orderservice.share.CustomException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -31,7 +31,6 @@ public class JwtHelper {
         String userId = extractFromClaims(token, claims -> claims.get("userId", String.class));
         return userId != null ? UUID.fromString(userId) : null;
     }
-
 
     public Date extractTokenExpirationDate(String token) {
         return extractFromClaims(token, Claims::getExpiration);

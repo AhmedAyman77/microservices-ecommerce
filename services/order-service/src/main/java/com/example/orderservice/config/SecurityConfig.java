@@ -1,4 +1,4 @@
-package com.example.catalogservice.config;
+package com.example.orderservice.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -30,18 +30,12 @@ public class SecurityConfig {
             })
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> {
-                auth.requestMatchers(HttpMethod.POST, "/categories").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/categories").hasAnyRole("CUSTOMER", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/categories/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/categories/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/products").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/products").hasAnyRole("CUSTOMER", "ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/products/{productID}").hasAnyRole("CUSTOMER", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/products/{productID}").hasAnyRole("CUSTOMER", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/products/{productID}").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/products/{productId}/upload-image").hasRole("ADMIN")
-                        .anyRequest()
-                        .authenticated();
+                auth
+                .requestMatchers(HttpMethod.GET, "/orders/all").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH, "/orders/{orderId}/status").hasRole("ADMIN")
+                .requestMatchers("/orders/**").hasAnyRole("CUSTOMER", "ADMIN")
+                .anyRequest()
+                .authenticated();
             })
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         

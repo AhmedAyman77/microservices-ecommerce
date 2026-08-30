@@ -1,5 +1,6 @@
 package com.example.cartservice.abstracts;
 
+import com.example.cartservice.dtos.CartItemsResponse;
 import com.example.cartservice.models.CartItems;
 
 import java.util.List;
@@ -14,5 +15,5 @@ public interface CartService {
 
     public void clearCart(UUID userId);
 
-    public List<CartItems> getUserCart(UUID userId);
+    public List<CartItemsResponse> getUserCart(UUID userId);
 }

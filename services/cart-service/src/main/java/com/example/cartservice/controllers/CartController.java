@@ -1,6 +1,7 @@
 package com.example.cartservice.controllers;
 
 import com.example.cartservice.abstracts.CartService;
+import com.example.cartservice.dtos.CartItemsResponse;
 import com.example.cartservice.dtos.UpdateCartItem;
 import com.example.cartservice.models.CartItems;
 import com.example.cartservice.share.GlobalResponse;
@@ -53,9 +54,9 @@ public class CartController {
     }
 
     @GetMapping
-    public ResponseEntity<GlobalResponse<List<CartItems>>> getUserCart(Authentication authentication) {
-        List<CartItems> cartItems = cartService.getUserCart(getUserId(authentication));
-        return ResponseEntity.ok(new GlobalResponse<List<CartItems>>(cartItems));
+    public ResponseEntity<GlobalResponse<List<CartItemsResponse>>> getUserCart(Authentication authentication) {
+        List<CartItemsResponse> cartItems = cartService.getUserCart(getUserId(authentication));
+        return ResponseEntity.ok(new GlobalResponse<List<CartItemsResponse>>(cartItems));
     }
 
     @DeleteMapping

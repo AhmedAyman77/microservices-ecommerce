@@ -1,6 +1,8 @@
 package com.example.cartservice.services;
 
 import com.example.cartservice.abstracts.CartService;
+import com.example.cartservice.dtos.ApiResponse;
+import com.example.cartservice.dtos.CartItemsResponse;
 import com.example.cartservice.dtos.ProductResponse;
 import com.example.cartservice.models.CartItems;
 import com.example.cartservice.models.Carts;
@@ -11,11 +13,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpHeaders;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,13 +34,7 @@ public class CartServiceImp implements CartService {
     @Override
     @Transactional
     public void addProduct(UUID userId, UUID productId) {
-        ProductResponse product = webClientBuilder.build()
-                .get()
-                .uri("http://catalog-service/products/{productID}", productId)
-                .header(HttpHeaders.AUTHORIZATION, getIncomingAuthHeader())
-                .retrieve()
-                .bodyToMono(ProductResponse.class)
-                .block();
+        ProductResponse product = callGetProduct(productId);
 
         if(product == null) {
             throw CustomException.resourceNotFound("Product not found");
@@ -80,13 +78,7 @@ public class CartServiceImp implements CartService {
     @Override
     @Transactional
     public void setProductQuantity(UUID userId, UUID productId, Integer quantity) {
-        ProductResponse product = webClientBuilder.build()
-                .get()
-                .uri("http://catalog-service/products/{productID}", productId)
-                .header(HttpHeaders.AUTHORIZATION, getIncomingAuthHeader())
-                .retrieve()
-                .bodyToMono(ProductResponse.class)
-                .block();
+        ProductResponse product = callGetProduct(productId);
 
         if(product == null) {
             throw CustomException.resourceNotFound("Product not found");
@@ -124,12 +116,14 @@ public class CartServiceImp implements CartService {
     }
 
     @Override
-    public List<CartItems> getUserCart(UUID userId) {
+    public List<CartItemsResponse> getUserCart(UUID userId) {
         Carts cart = cartsRepository.findByUserId(userId).orElseThrow(
             () -> CustomException.resourceNotFound("Cart not found")
         );
 
-        return cartItemsRepository.findByCartId_Id(cart.getId()).orElse(List.of());
+        List<CartItems> cartItems = cartItemsRepository.findByCartId_Id(cart.getId()).orElse(List.of());
+
+        return convertCartItemToCartItemResponse(cartItems);
     }
 
 //   private methods
@@ -159,5 +153,35 @@ public class CartServiceImp implements CartService {
                                     newCart.setUserId(userId);
                                     return cartsRepository.save(newCart);
                                 });
+    }
+
+    private List<CartItemsResponse> convertCartItemToCartItemResponse(List<CartItems> cartItems) {
+        List<CartItemsResponse> res = new ArrayList<>();
+
+        for(CartItems cartItem: cartItems) {
+            CartItemsResponse newCartItem = new CartItemsResponse(
+                    cartItem.getCartId(),
+                    cartItem.getProductId(),
+                    cartItem.getQuantity()
+            );
+
+            res.add(newCartItem);
+        }
+
+        return res;
+    }
+
+    private ProductResponse callGetProduct(UUID productId) {
+        ApiResponse<ProductResponse> productApiResponse = webClientBuilder.build()
+                .get()
+                .uri("http://catalog-service/products/{productID}", productId)
+                .header(HttpHeaders.AUTHORIZATION, getIncomingAuthHeader())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<ApiResponse<ProductResponse>>() {})
+                .block();
+
+        ProductResponse product = productApiResponse != null ? productApiResponse.data() : null;
+
+        return product;
     }
 }

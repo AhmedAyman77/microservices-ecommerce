@@ -10,10 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 
 @Component
@@ -29,6 +26,12 @@ public class JwtHelper {
     public String extractRole(String token) {
         return extractFromClaims(token, claims -> claims.get("role", String.class));
     }
+
+    public UUID extractUserId(String token) {
+        String userId = extractFromClaims(token, claims -> claims.get("userId", String.class));
+        return userId != null ? UUID.fromString(userId) : null;
+    }
+
 
     public Date extractTokenExpirationDate(String token) {
         return extractFromClaims(token, Claims::getExpiration);
