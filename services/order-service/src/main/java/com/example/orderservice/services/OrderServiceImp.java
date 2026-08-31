@@ -45,7 +45,7 @@ public class OrderServiceImp implements OrderService {
     @Transactional
     public Orders checkout(UUID userId) {
         ApiResponse<List<CartItemsResponse>> cartApiResponse = webClientBuilder.build().get()
-                .uri("http://cart-service/cart/")
+                .uri("http://cart-service/cart")
                 .header(HttpHeaders.AUTHORIZATION, getIncomingAuthHeader())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<ApiResponse<List<CartItemsResponse>>>() {})

@@ -26,7 +26,7 @@ public class Orders {
     @UuidGenerator
     private UUID id;
 
-    @Column(name = "user_id", unique = true, nullable = false)
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
     @Enumerated(EnumType.STRING)

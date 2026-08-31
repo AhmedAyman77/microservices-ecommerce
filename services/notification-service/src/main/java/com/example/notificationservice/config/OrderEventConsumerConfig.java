@@ -10,6 +10,9 @@ import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Configuration
 public class OrderEventConsumerConfig {
 
@@ -17,11 +20,20 @@ public class OrderEventConsumerConfig {
     public ConsumerFactory<String, OrderPlacedEvent> orderConsumerFactory(
             KafkaProperties kafkaProperties) {
 
+        Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties());
+        props.remove("spring.json.value.default.type");
+        props.remove("spring.json.trusted.packages");
+        props.remove("spring.json.use.type.headers");
+
+        props.put("group.id", "notification-service-order-events");
+
         JacksonJsonDeserializer<OrderPlacedEvent> deserializer =
                 new JacksonJsonDeserializer<>(OrderPlacedEvent.class);
+        deserializer.setUseTypeHeaders(false); // always use OrderPlacedEvent, ignore any type header from the producer
+        deserializer.addTrustedPackages("*");
 
         return new DefaultKafkaConsumerFactory<>(
-                kafkaProperties.buildConsumerProperties(),
+                props,
                 new StringDeserializer(),
                 deserializer
         );
