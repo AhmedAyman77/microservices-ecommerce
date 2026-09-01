@@ -28,7 +28,6 @@ out/
 bin/
 
 # VS Code
-.vscode/
 
 # NetBeans
 nbproject/private/
@@ -42,7 +41,8 @@ dist/
 Thumbs.db
 
 # Environment variables
-.env
 
 # Maven Wrapper (optional)
 !.mvn/wrapper/maven-wrapper.jar
+config.bat
+node_modules
